@@ -9,9 +9,10 @@
     <link rel="icon" type="image/jpeg" href="logo.png">
     <link rel="apple-touch-icon" href="logo.png">
 
-    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;500;700;900&display=swap" rel="stylesheet">
+    
     <style>
         body { font-family: 'Outfit', sans-serif; scroll-behavior: smooth; }
         .hero-bg { 
@@ -276,20 +277,19 @@
         </div>
     </footer>
 
-    <!-- UPDATED: Registration & OTP Modal -->
+    <!-- UPDATED: Direct Registration Modal -->
     <div id="registerModal" class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-[100] hidden flex items-center justify-center p-4">
         <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden relative">
             <div class="bg-blue-600 p-6 text-white flex justify-between items-center">
                 <div>
                     <h2 class="text-xl font-bold">Register / Message</h2>
-                    <p class="text-blue-200 text-sm mt-1" id="modalSubtitle">Fill the details, we'll get back to you!</p>
+                    <p class="text-blue-200 text-sm mt-1">Fill the details, we'll get back to you!</p>
                 </div>
                 <button onclick="toggleModal('registerModal')" class="text-blue-200 hover:text-white transition">
                     <i class="fa-solid fa-xmark text-2xl"></i>
                 </button>
             </div>
             
-            <!-- Step 1: Details Form -->
             <form id="contactForm" class="p-6 space-y-4">
                 <div>
                     <label class="block text-sm font-bold text-slate-700 mb-1">Full Name</label>
@@ -297,7 +297,8 @@
                 </div>
                 <div>
                     <label class="block text-sm font-bold text-slate-700 mb-1">Mobile Number</label>
-                    <input type="tel" id="userPhone" placeholder="e.g. 9876543210" maxlength="10" oninput="this.value = this.value.replace(/[^0-9]/g, '')" class="w-full px-4 py-2 rounded-lg border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition" required>                </div>
+                    <input type="tel" id="userPhone" placeholder="e.g. 9876543210" maxlength="10" oninput="this.value = this.value.replace(/[^0-9]/g, '')" class="w-full px-4 py-2 rounded-lg border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition" required>
+                </div>
                 <div>
                     <label class="block text-sm font-bold text-slate-700 mb-1">Address</label>
                     <input type="text" id="userAddress" placeholder="Your local address" class="w-full px-4 py-2 rounded-lg border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition" required>
@@ -307,20 +308,7 @@
                     <textarea rows="3" id="userMessage" placeholder="I want to join the morning shift..." class="w-full px-4 py-2 rounded-lg border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition" required></textarea>
                 </div>
                 <button type="submit" id="submitBtn" class="w-full bg-slate-900 text-white font-bold py-3 rounded-lg hover:bg-slate-800 transition shadow-lg mt-2 flex justify-center items-center gap-2">
-                    Verify Mobile Number
-                </button>
-            </form>
-
-            <!-- Step 2: OTP Verification Form -->
-            <form id="otpForm" class="p-6 space-y-4 hidden">
-                <div class="text-center mb-4">
-                    <p class="text-sm text-slate-600">Please enter the 5-digit code sent to your mobile number.</p>
-                </div>
-                <div>
-                    <input type="text" id="otpInput" maxlength="5" placeholder="00000" class="w-full px-4 py-3 text-center tracking-[0.5em] text-2xl font-bold rounded-lg border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition" required>
-                </div>
-                <button type="submit" id="verifyBtn" class="w-full bg-blue-600 text-white font-bold py-3 rounded-lg hover:bg-blue-700 transition shadow-lg mt-2 flex justify-center items-center gap-2">
-                    Confirm Registration
+                    Submit Registration
                 </button>
             </form>
         </div>
@@ -343,83 +331,25 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
 
-        let currentDocId = null;
-
         // Modal Toggle
         function toggleModal(id) {
             document.getElementById(id).classList.toggle('hidden');
         }
 
-        // Form Submission - Step 1
+        // Form Submission - Direct to inquiries collection
         document.getElementById('contactForm').addEventListener('submit', function(e) {
             e.preventDefault();
             
             const btn = document.getElementById('submitBtn');
-            btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Sending OTP...';
+            btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Submitting...';
             btn.disabled = true;
 
-            const phone = document.getElementById('userPhone').value;
-
-            // Save minimal data to a temporary collection to trigger backend SMS
-            db.collection("pending_verifications").add({
-                phone: phone,
-                status: "pending",
-                timestamp: firebase.firestore.FieldValue.serverTimestamp()
-            })
-            .then((docRef) => {
-                currentDocId = docRef.id;
-                
-                // Hide Details Form, Show OTP Form
-                document.getElementById('contactForm').classList.add('hidden');
-                document.getElementById('otpForm').classList.remove('hidden');
-                document.getElementById('modalSubtitle').innerText = "Mobile Verification";
-                
-                btn.innerHTML = 'Verify Mobile Number';
-                btn.disabled = false;
-            })
-            .catch((error) => {
-                console.error("Error: ", error);
-                alert("Could not initiate verification. Try again.");
-                btn.innerHTML = 'Verify Mobile Number';
-                btn.disabled = false;
-            });
-        });
-
-        // Form Submission - Step 2 (OTP Verification)
-        document.getElementById('otpForm').addEventListener('submit', function(e) {
-            e.preventDefault();
-            
-            const verifyBtn = document.getElementById('verifyBtn');
-            verifyBtn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Verifying...';
-            verifyBtn.disabled = true;
-
-            const userOTP = document.getElementById('otpInput').value;
-
-            // Check the OTP written by the backend
-            db.collection("pending_verifications").doc(currentDocId).get().then((doc) => {
-                if (doc.exists && doc.data().otp === userOTP) {
-                    // OTP is correct, save the full inquiry
-                    finalizeRegistration();
-                } else {
-                    alert("Incorrect OTP. Please try again.");
-                    verifyBtn.innerHTML = 'Confirm Registration';
-                    verifyBtn.disabled = false;
-                }
-            }).catch(error => {
-                console.error("Error during verification:", error);
-                alert("Verification failed. Please try again.");
-                verifyBtn.innerHTML = 'Confirm Registration';
-                verifyBtn.disabled = false;
-            });
-        });
-
-        // Finalize registration by writing to standard 'inquiries' collection
-        function finalizeRegistration() {
             const name = document.getElementById('userName').value;
             const phone = document.getElementById('userPhone').value;
             const address = document.getElementById('userAddress').value;
             const message = document.getElementById('userMessage').value;
 
+            // Save data directly to the inquiries collection
             db.collection("inquiries").add({
                 name: name,
                 phone: phone,
@@ -427,28 +357,25 @@
                 message: message,
                 status: "unread",
                 timestamp: firebase.firestore.FieldValue.serverTimestamp()
-            }).then(() => {
-                alert("Success! Your message has been sent to Safal Library.");
+            })
+            .then(() => {
+                alert("Success! Your registration details have been sent to Safal Library.");
                 
-                // Reset everything
+                // Reset form and close modal
                 document.getElementById('contactForm').reset();
-                document.getElementById('otpForm').reset();
-                
-                document.getElementById('otpForm').classList.add('hidden');
-                document.getElementById('contactForm').classList.remove('hidden');
-                document.getElementById('modalSubtitle').innerText = "Fill the details, we'll get back to you!";
-                
                 toggleModal('registerModal');
                 
-                document.getElementById('verifyBtn').innerHTML = 'Confirm Registration';
-                document.getElementById('verifyBtn').disabled = false;
-            }).catch((error) => {
+                // Reset button state
+                btn.innerHTML = 'Submit Registration';
+                btn.disabled = false;
+            })
+            .catch((error) => {
                 console.error("Error writing document: ", error);
                 alert("Something went wrong saving your details. Please try again.");
-                document.getElementById('verifyBtn').innerHTML = 'Confirm Registration';
-                document.getElementById('verifyBtn').disabled = false;
+                btn.innerHTML = 'Submit Registration';
+                btn.disabled = false;
             });
-        }
+        });
     </script>
 </body>
 </html>
